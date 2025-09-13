@@ -1,0 +1,45 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Virtual environment
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Hugging Face / Transformers cache
+.cache/
+*.lock
+
+# Model checkpoints
+price_roberta_lora/checkpoint-*/
+model_src/__pycache__/
+
+# Scraping related binaries
+Scraping/chrome-linux64/
+Scraping/__pycache__/
+
+# Local notebooks
+#execution.ipynb
+
+/price_llama_lora
+/price_roberta_lora
+/wandb
