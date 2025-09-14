@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-QLoRA SFT training for product price prediction.
-- Stable for RTX A6000 (bf16)
+QLoRA SFT training for product price prediction using Qwen3-8B (dense).
+- Stable on RTX A6000 (bf16)
 - Supports WandB logging
 - Dataset cleaning to prevent NaN losses
 - Callable `train_sft()` function for Jupyter
@@ -23,7 +23,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    DataCollatorForLanguageModeling,   # ✅ correct location
+    DataCollatorForLanguageModeling,
 )
 from datasets import load_dataset
 from peft import LoraConfig
@@ -36,11 +36,12 @@ from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
 def train_sft(
     hf_user="Arupreza",
     dataset_name="ed-donner/pricer-data",
-    base_model="meta-llama/Meta-Llama-3.1-8B",
-    project_name="price_llama_lora",
+    base_model="Qwen/Qwen3-8B",          # ✅ Qwen3-8B (dense)
+    project_name="price_qwen3_8b_lora",
     log_to_wandb=True,
     epochs=1,
-    batch_size=4,
+    batch_size=2,
+    grad_accum=2,
     save_steps=2000,
     run_name=None,
     push_to_hub=False,
@@ -48,10 +49,8 @@ def train_sft(
     eval_size=None,
 ):
     """
-    Train a QLoRA-SFT model for product price prediction.
-
-    Returns:
-        trainer, model, tokenizer, dataset
+    Train a QLoRA-SFT model for product price prediction (Qwen3-8B).
+    Returns: trainer, model, tokenizer, dataset
     """
 
     # ---------------------------
@@ -78,15 +77,15 @@ def train_sft(
     # ---------------------------
     # Constants
     # ---------------------------
-    MAX_SEQUENCE_LENGTH = 182
+    MAX_SEQUENCE_LENGTH = 1024
     RUN_NAME = run_name or f"{datetime.now():%Y-%m-%d_%H.%M.%S}"
     PROJECT_RUN_NAME = f"{project_name}-{RUN_NAME}"
     HUB_MODEL_NAME = f"{hf_user}/{PROJECT_RUN_NAME}"
 
-    # LoRA params
-    LORA_R = 32
-    LORA_ALPHA = 64
-    TARGET_MODULES = ["q_proj", "v_proj", "k_proj", "o_proj"]
+    # LoRA params tuned for Qwen3-8B
+    LORA_R = 64
+    LORA_ALPHA = 128
+    TARGET_MODULES = ["c_attn", "o_proj", "w1", "w2"]
     LORA_DROPOUT = 0.1
     QUANT_4_BIT = True
 
@@ -95,20 +94,16 @@ def train_sft(
     # ---------------------------
     dataset = load_dataset(dataset_name)
 
-    # clean dataset (avoid NaNs)
     def clean_example(example):
         text = example.get("text", "")
         if text is None or text.strip() == "":
-            example["text"] = "N/A\nPrice is $0.00"
-        elif "Price is $" not in text:
-            example["text"] = text.strip() + "\nPrice is $"
+            example["text"] = "N/A"
         return example
 
     dataset = dataset.map(clean_example)
     train = dataset["train"]
     test = dataset["test"]
 
-    # Subset for debugging
     if train_size:
         train = train.select(range(min(train_size, len(train))))
     if eval_size:
@@ -134,37 +129,29 @@ def train_sft(
     # Load model & tokenizer
     # ---------------------------
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
-    tokenizer.pad_token = tokenizer.eos_token
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
         quantization_config=quant_config,
         device_map="auto",
+        trust_remote_code=True,
     )
     model.generation_config.pad_token_id = tokenizer.pad_token_id
 
     print(f"Memory footprint: {model.get_memory_footprint() / 1e6:.1f} MB")
 
     # ---------------------------
-    # Collator (safer default)
+    # Collator
     # ---------------------------
-    
-    # define your template string
     response_template = "Price is $"
 
     # initialize collator
     collator = DataCollatorForCompletionOnlyLM(
         response_template=response_template,
         tokenizer=tokenizer
-    )
-
-    # ---------------------------
-    # Collator (fix: use LM objective)
-    # ---------------------------
-    collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False
     )
 
     # ---------------------------
@@ -187,14 +174,14 @@ def train_sft(
         num_train_epochs=epochs,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=1,
-        eval_strategy="steps",      # ✅ correct key
+        eval_strategy="steps",
         eval_steps=200,
-        gradient_accumulation_steps=1,
+        gradient_accumulation_steps=grad_accum,
         optim="paged_adamw_32bit",
         save_steps=save_steps,
         save_total_limit=10,
         logging_steps=50,
-        learning_rate=1e-4,
+        learning_rate=2e-5,   # ✅ stable for Qwen3-8B
         weight_decay=0.001,
         fp16=False,
         bf16=True,
@@ -232,7 +219,7 @@ def train_sft(
     trainer.train()
 
     # ---------------------------
-    # PushDataCollatorForCompletionOnlyLM
+    # Push
     # ---------------------------
     if push_to_hub:
         trainer.model.push_to_hub(PROJECT_RUN_NAME, private=True)
