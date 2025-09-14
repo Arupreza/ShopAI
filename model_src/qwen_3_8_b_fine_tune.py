@@ -2,16 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-QLoRA SFT training for product price prediction using Qwen3-8B (dense).
-- Stable on RTX A6000 (bf16)
+QLoRA SFT training for product price prediction (Qwen/Qwen3-8B).
+- Stable for RTX A6000 (bf16)
 - Supports WandB logging
 - Dataset cleaning to prevent NaN losses
-- Callable `train_sft()` function for Jupyter
 """
 
-# =======================================================
-# Imports
-# =======================================================
 import os
 from datetime import datetime
 import torch
@@ -27,7 +23,7 @@ from transformers import (
 )
 from datasets import load_dataset
 from peft import LoraConfig
-from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
+from trl import SFTTrainer, SFTConfig
 
 
 # =======================================================
@@ -36,25 +32,24 @@ from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
 def train_sft(
     hf_user="Arupreza",
     dataset_name="ed-donner/pricer-data",
-    base_model="Qwen/Qwen3-8B",          # ✅ Qwen3-8B (dense)
-    project_name="price_qwen3_8b_lora",
+    base_model="Qwen/Qwen3-8B",
+    project_name="pricer_qwen3_8b",
     log_to_wandb=True,
     epochs=1,
     batch_size=2,
-    grad_accum=2,
-    save_steps=2000,
+    grad_accum=2,          # ✅ added as user requested
+    save_steps=400,
     run_name=None,
     push_to_hub=False,
     train_size=None,
     eval_size=None,
 ):
     """
-    Train a QLoRA-SFT model for product price prediction (Qwen3-8B).
-    Returns: trainer, model, tokenizer, dataset
+    Train a QLoRA-SFT model for product price prediction (Qwen/Qwen3-8B).
     """
 
     # ---------------------------
-    # Load environment variables
+    # Env & Auth
     # ---------------------------
     load_dotenv()
 
@@ -77,16 +72,19 @@ def train_sft(
     # ---------------------------
     # Constants
     # ---------------------------
-    MAX_SEQUENCE_LENGTH = 1024
+    MAX_SEQUENCE_LENGTH = 182
     RUN_NAME = run_name or f"{datetime.now():%Y-%m-%d_%H.%M.%S}"
     PROJECT_RUN_NAME = f"{project_name}-{RUN_NAME}"
     HUB_MODEL_NAME = f"{hf_user}/{PROJECT_RUN_NAME}"
 
-    # LoRA params tuned for Qwen3-8B
-    LORA_R = 64
-    LORA_ALPHA = 128
-    TARGET_MODULES = ["c_attn", "o_proj", "w1", "w2"]
-    LORA_DROPOUT = 0.1
+    # LoRA params tuned for Qwen-8B
+    LORA_R = 16
+    LORA_ALPHA = 32
+    LORA_DROPOUT = 0.05
+    TARGET_MODULES = [
+        "q_proj", "k_proj", "v_proj", "o_proj",
+        "gate_proj", "up_proj", "down_proj"
+    ]
     QUANT_4_BIT = True
 
     # ---------------------------
@@ -97,7 +95,9 @@ def train_sft(
     def clean_example(example):
         text = example.get("text", "")
         if text is None or text.strip() == "":
-            example["text"] = "N/A"
+            example["text"] = "N/A\nPrice is $0.00"
+        elif "Price is $" not in text:
+            example["text"] = text.strip() + "\nPrice is $"
         return example
 
     dataset = dataset.map(clean_example)
@@ -112,32 +112,24 @@ def train_sft(
     # ---------------------------
     # Quantization config
     # ---------------------------
-    if QUANT_4_BIT:
-        quant_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_quant_type="nf4",
-        )
-    else:
-        quant_config = BitsAndBytesConfig(
-            load_in_8bit=True,
-            bnb_8bit_compute_dtype=torch.bfloat16,
-        )
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_quant_type="nf4",
+    )
 
     # ---------------------------
     # Load model & tokenizer
     # ---------------------------
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
         quantization_config=quant_config,
         device_map="auto",
-        trust_remote_code=True,
     )
     model.generation_config.pad_token_id = tokenizer.pad_token_id
 
@@ -146,12 +138,9 @@ def train_sft(
     # ---------------------------
     # Collator
     # ---------------------------
-    response_template = "Price is $"
-
-    # initialize collator
-    collator = DataCollatorForCompletionOnlyLM(
-        response_template=response_template,
-        tokenizer=tokenizer
+    collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False
     )
 
     # ---------------------------
@@ -176,16 +165,16 @@ def train_sft(
         per_device_eval_batch_size=1,
         eval_strategy="steps",
         eval_steps=200,
-        gradient_accumulation_steps=grad_accum,
+        gradient_accumulation_steps=grad_accum,   # ✅ user param
         optim="paged_adamw_32bit",
         save_steps=save_steps,
         save_total_limit=10,
         logging_steps=50,
-        learning_rate=2e-5,   # ✅ stable for Qwen3-8B
-        weight_decay=0.001,
+        learning_rate=5e-5,              # tuned for Qwen
+        weight_decay=0.01,
         fp16=False,
         bf16=True,
-        max_grad_norm=0.3,
+        max_grad_norm=1.0,
         max_steps=-1,
         warmup_ratio=0.03,
         group_by_length=True,
@@ -218,9 +207,6 @@ def train_sft(
     # ---------------------------
     trainer.train()
 
-    # ---------------------------
-    # Push
-    # ---------------------------
     if push_to_hub:
         trainer.model.push_to_hub(PROJECT_RUN_NAME, private=True)
         print(f"✅ Saved to Hugging Face Hub: {PROJECT_RUN_NAME}")
