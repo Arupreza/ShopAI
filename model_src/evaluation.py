@@ -261,7 +261,6 @@ def qwen_evaluation(model_path: str, test_amount: int = 250):
     import re
     import math
     import torch
-    import torch.nn.functional as F
     import matplotlib.pyplot as plt
     from datasets import load_dataset
     from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, set_seed
@@ -270,10 +269,9 @@ def qwen_evaluation(model_path: str, test_amount: int = 250):
     # =======================================================
     # Constants
     # =======================================================
-    BASE_MODEL = "Qwen/Qwen3-8B"   # ✅ switched to Qwen
+    BASE_MODEL = "Qwen/Qwen3-8B"
     DATASET_NAME = "ed-donner/pricer-data"
     QUANT_4_BIT = True
-    TOP_K = 3
 
     # Colors
     GREEN = "\033[92m"
@@ -291,18 +289,15 @@ def qwen_evaluation(model_path: str, test_amount: int = 250):
     # =======================================================
     # Quantization
     # =======================================================
-    if QUANT_4_BIT:
-        quant_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_quant_type="nf4",
-        )
-    else:
-        quant_config = BitsAndBytesConfig(
-            load_in_8bit=True,
-            bnb_8bit_compute_dtype=torch.bfloat16,
-        )
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_quant_type="nf4",
+    ) if QUANT_4_BIT else BitsAndBytesConfig(
+        load_in_8bit=True,
+        bnb_8bit_compute_dtype=torch.bfloat16,
+    )
 
     # =======================================================
     # Load Model & Tokenizer
@@ -330,44 +325,27 @@ def qwen_evaluation(model_path: str, test_amount: int = 250):
     # Prediction helpers
     # =======================================================
     def extract_price(s: str) -> float:
+        """Extract the first number after 'Price is $'."""
         if "Price is $" in s:
             contents = s.split("Price is $")[1]
             contents = contents.replace(",", "")
             match = re.search(r"[-+]?\d*\.\d+|\d+", contents)
             return float(match.group()) if match else 0
-        return 0
+        return 0.0
 
     def improved_model_predict(prompt: str, device="cuda") -> float:
+        """Generate full continuation after 'Price is $' and extract number."""
         set_seed(42)
-        inputs = tokenizer.encode(prompt, return_tensors="pt").to(device)
-        attention_mask = torch.ones(inputs.shape, device=device)
+        inputs = tokenizer(prompt, return_tensors="pt").to(device)
 
         with torch.no_grad():
-            outputs = fine_tuned_model(inputs, attention_mask=attention_mask)
-            next_token_logits = outputs.logits[:, -1, :].to("cpu")
-            next_token_probs = F.softmax(next_token_logits, dim=-1)
-
-        top_prob, top_token_id = next_token_probs.topk(TOP_K)
-        prices, weights = [], []
-
-        for i in range(TOP_K):
-            predicted_token = tokenizer.decode([top_token_id[0][i]]).strip()
-            probability = top_prob[0][i].item()
-
-            # ✅ more robust number parsing for Qwen
-            match = re.search(r"[-+]?\d*\.\d+|\d+", predicted_token)
-            result = float(match.group()) if match else 0.0
-
-            if result > 0:
-                prices.append(result)
-                weights.append(probability)
-
-        if not prices:
-            return 0.0
-
-        total = sum(weights)
-        weighted_prices = [price * weight / total for price, weight in zip(prices, weights)]
-        return sum(weighted_prices)
+            output_ids = fine_tuned_model.generate(
+                **inputs,
+                max_new_tokens=10,     # enough to output full number
+                do_sample=False,       # greedy decode
+            )
+        decoded = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+        return extract_price(decoded)
 
     # =======================================================
     # Evaluation
@@ -392,7 +370,7 @@ def qwen_evaluation(model_path: str, test_amount: int = 250):
         sle = log_error**2
         color = color_for(error, truth)
 
-        title = datapoint["text"].split("\n\n")[1][:20] + "..." if "\n\n" in datapoint["text"] else datapoint["text"][:20]
+        title = datapoint["text"][:40].replace("\n", " ")
 
         guesses.append(guess)
         truths.append(truth)
@@ -427,5 +405,5 @@ def qwen_evaluation(model_path: str, test_amount: int = 250):
     return {"avg_error": avg_error, "rmsle": rmsle, "hits_percent": hits}
 
 
-# Example call:
+# Example usage:
 # results = qwen_evaluation("pricer_qwen3_8b-2025-09-14_11.30.00/checkpoint-1000", test_amount=200)

@@ -42,4 +42,6 @@ Scraping/__pycache__/
 
 /price_llama_lora
 /price_roberta_lora
+/price_qwen_lora
 /wandb
+test.ipynb

@@ -33,7 +33,7 @@ def train_sft(
     hf_user="Arupreza",
     dataset_name="ed-donner/pricer-data",
     base_model="Qwen/Qwen3-8B",
-    project_name="pricer_qwen3_8b",
+    project_name="qwen3_8b_fine_tune",
     log_to_wandb=True,
     epochs=1,
     batch_size=2,
