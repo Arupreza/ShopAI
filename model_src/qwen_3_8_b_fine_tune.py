@@ -72,7 +72,7 @@ def train_sft(
     # ---------------------------
     # Constants
     # ---------------------------
-    MAX_SEQUENCE_LENGTH = 182
+    MAX_SEQUENCE_LENGTH = 2048
     RUN_NAME = run_name or f"{datetime.now():%Y-%m-%d_%H.%M.%S}"
     PROJECT_RUN_NAME = f"{project_name}-{RUN_NAME}"
     HUB_MODEL_NAME = f"{hf_user}/{PROJECT_RUN_NAME}"

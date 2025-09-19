@@ -407,3 +407,156 @@ def qwen_evaluation(model_path: str, test_amount: int = 250):
 
 # Example usage:
 # results = qwen_evaluation("pricer_qwen3_8b-2025-09-14_11.30.00/checkpoint-1000", test_amount=200)
+
+
+def gpt2_evaluation(model_path: str, test_amount: int = 250):
+    import os
+    import re
+    import math
+    import torch
+    import torch.nn.functional as F
+    import matplotlib.pyplot as plt
+    from datasets import load_dataset
+    from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
+
+    # =======================================================
+    # Constants
+    # =======================================================
+    BASE_MODEL = "gpt2"  # or "gpt2-medium", "gpt2-large", "gpt2-xl"
+    DATASET_NAME = "ed-donner/pricer-data"
+    TOP_K = 3
+
+    # Colors for printing
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    RESET = "\033[0m"
+    COLOR_MAP = {"red": RED, "orange": YELLOW, "green": GREEN}
+
+    # =======================================================
+    # Data
+    # =======================================================
+    dataset = load_dataset(DATASET_NAME)
+    test = dataset["test"]
+
+    # =======================================================
+    # Load Model & Tokenizer
+    # =======================================================
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,  # ✅ this can be Hugging Face hub path or local fine-tuned checkpoint
+        device_map="auto",
+    )
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
+
+    print(f"Memory footprint: {model.get_memory_footprint() / 1e6:.1f} MB")
+
+    # =======================================================
+    # Prediction helpers
+    # =======================================================
+    def extract_price(s: str) -> float:
+        if "Price is $" in s:
+            contents = s.split("Price is $")[1]
+            contents = contents.replace(",", "")
+            match = re.search(r"[-+]?\d*\.\d+|\d+", contents)
+            return float(match.group()) if match else 0
+        return 0
+
+    def improved_model_predict(prompt: str, device="cuda") -> float:
+        set_seed(42)
+        inputs = tokenizer.encode(prompt, return_tensors="pt").to(device)
+        attention_mask = torch.ones(inputs.shape, device=device)
+
+        with torch.no_grad():
+            outputs = model(inputs, attention_mask=attention_mask)
+            next_token_logits = outputs.logits[:, -1, :].to("cpu")
+            next_token_probs = F.softmax(next_token_logits, dim=-1)
+
+        top_prob, top_token_id = next_token_probs.topk(TOP_K)
+        prices, weights = [], []
+
+        for i in range(TOP_K):
+            predicted_token = tokenizer.decode(top_token_id[0][i])
+            probability = top_prob[0][i]
+
+            try:
+                result = float(predicted_token)
+            except ValueError:
+                result = 0.0
+
+            if result > 0:
+                prices.append(result)
+                weights.append(probability)
+
+        if not prices:
+            return 0.0
+
+        total = sum(weights)
+        weighted_prices = [price * weight / total for price, weight in zip(prices, weights)]
+        return sum(weighted_prices).item()
+
+    # =======================================================
+    # Evaluation
+    # =======================================================
+    guesses, truths, errors, sles, colors = [], [], [], [], []
+
+    def color_for(error, truth):
+        if error < 40 or error / truth < 0.2:
+            return "green"
+        elif error < 80 or error / truth < 0.4:
+            return "orange"
+        else:
+            return "red"
+
+    for i in range(min(test_amount, len(test))):
+        datapoint = test[i]
+        guess = improved_model_predict(datapoint["text"])
+        truth = datapoint["price"]
+
+        error = abs(guess - truth)
+        log_error = math.log(truth + 1) - math.log(guess + 1)
+        sle = log_error**2
+        color = color_for(error, truth)
+
+        title = datapoint["text"].split("\n\n")[1][:20] + "..." if "\n\n" in datapoint["text"] else datapoint["text"][:20]
+
+        guesses.append(guess)
+        truths.append(truth)
+        errors.append(error)
+        sles.append(sle)
+        colors.append(color)
+
+        print(
+            f"{COLOR_MAP[color]}{i+1}: Guess: ${guess:,.2f} "
+            f"Truth: ${truth:,.2f} Error: ${error:,.2f} "
+            f"SLE: {sle:,.2f} Item: {title}{RESET}"
+        )
+
+    avg_error = sum(errors) / len(errors)
+    rmsle = math.sqrt(sum(sles) / len(sles))
+    hits = sum(1 for c in colors if c == "green") / len(errors) * 100
+
+    # =======================================================
+    # Chart
+    # =======================================================
+    max_val = max(max(truths), max(guesses))
+    plt.figure(figsize=(12, 8))
+    plt.plot([0, max_val], [0, max_val], color="deepskyblue", lw=2, alpha=0.6)
+    plt.scatter(truths, guesses, s=3, c=colors)
+    plt.xlabel("Ground Truth")
+    plt.ylabel("Model Estimate")
+    plt.xlim(0, max_val)
+    plt.ylim(0, max_val)
+    plt.title(f"Error=${avg_error:,.2f} RMSLE={rmsle:,.2f} Hits={hits:.1f}%")
+    plt.show()
+
+    return {"avg_error": avg_error, "rmsle": rmsle, "hits_percent": hits}
+
+
+# Example call:
+# results = gpt2_evaluation("path/to/your/fine-tuned-gpt2", test_amount=200)
+# print(results)
