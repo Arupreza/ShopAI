@@ -41,5 +41,6 @@ Scraping/__pycache__/
 #execution.ipynb
 
 /price_prediction_peft
+/product_vector_store
 /wandb
 test.ipynb
