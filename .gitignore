@@ -40,9 +40,6 @@ Scraping/__pycache__/
 # Local notebooks
 #execution.ipynb
 
-/price_llama_lora
-/price_roberta_lora
-/price_qwen_lora
-/price-gpt_2_lora
+/price_prediction_peft
 /wandb
 test.ipynb
