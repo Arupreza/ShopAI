@@ -1,0 +1,32 @@
+(a) 1. Core Parameters in FAISS HNSW
+
+When you build an HNSW index in FAISS (faiss.IndexHNSWFlat(dim, M)), there are three main parameters you’ll typically deal with:
+    (a) M — Graph Connectivity (number of neighbors per node)
+    Meaning: Maximum number of connections (edges) per node in the HNSW graph.
+    Range: Typical values are 16–64.
+    Effect:
+        Higher M → More edges → Higher recall and search quality, but memory usage increases.
+        Lower M → Faster, smaller index, but lower recall.
+    Rule of thumb:
+        Small datasets (<100k vectors): M = 16–32 is fine.
+        Large datasets (1M+ vectors): M = 48–64 gives better recall.
+
+(b) efConstruction — Build-time Exploration Depth
+    Meaning: How many candidates are explored during index construction.
+    Range: Usually 100–400.
+    Effect:
+        Higher value → Better graph connectivity, better recall later.
+        Cost: Slower build time, higher memory during construction.
+    Rule of thumb:
+        If you care about very high recall, set efConstruction = 200–400.
+        If speed/memory is more critical, 100–150 is enough.
+
+(c) efSearch — Query-time Exploration Depth
+    Meaning: How many nodes are explored during a search.
+    Range: Typically 10–200.
+    Effect:
+        Higher value → More thorough search → Higher recall, but slower queries.
+        Lower value → Faster, but recall drops.
+    Rule of thumb:
+        For real-time apps (chatbots, recommender systems): efSearch = 20–50.
+        For offline batch search (analytics, reranking): efSearch = 100–200.
