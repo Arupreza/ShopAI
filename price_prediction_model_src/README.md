@@ -150,12 +150,10 @@ python price_prediction_model_src/evaluation.py
 
 ## 📈 Performance Analysis Report
 
-| Model            | Params | GPU Memory (GB) | Training Time (1 epoch) | Eval Loss | Perplexity | R² Score  | Notes                                     |
-| ---------------- | ------ | --------------- | ----------------------- | --------- | ---------- | --------- | ----------------------------------------- |
-| **LLaMA-3.1-8B** | 8B     | 39.4            | 2h 35m                  | **0.182** | 1.20       | **0.981** | Best overall accuracy and stability       |
-| **Qwen-3B**      | 3B     | 21.6            | 1h 10m                  | 0.238     | 1.35       | 0.967     | Fast convergence, good tradeoff           |
-| **GPT-2**        | 1.5B   | 12.8            | 58m                     | 0.311     | 1.49       | 0.921     | Lightweight, less stable for long context |
-| **RoBERTa-base** | 125M   | 4.1             | 42m                     | 0.422     | —          | 0.889     | Strong baseline for regression-only mode  |
+<img src="Performance_Plot/Roberta.png" alt="Confusion Matrix" width="350" height="350">
+<img src="Performance_Plot/Llama.png" alt="Confusion Matrix" width="350" height="350">
+<img src="Performance_Plot/Qwen.png" alt="Confusion Matrix" width="350" height="350">
+<img src="Performance_Plot/GPT2.png" alt="Confusion Matrix" width="350" height="350">
 
 🧮 All runs were performed on an **RTX A6000 (48GB VRAM)** under mixed bf16 precision with batch size 4 and cosine LR scheduler.
 
