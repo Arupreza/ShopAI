@@ -150,10 +150,10 @@ python price_prediction_model_src/evaluation.py
 
 ## 📈 Performance Analysis Report
 
-<img src="Performance_Plot/Roberta.png" alt="Confusion Matrix" width="350" height="350">
-<img src="Performance_Plot/Llama.png" alt="Confusion Matrix" width="350" height="350">
-<img src="Performance_Plot/Qwen.png" alt="Confusion Matrix" width="350" height="350">
-<img src="Performance_Plot/GPT2.png" alt="Confusion Matrix" width="350" height="350">
+<img src="./Performance_Plot/Roberta.png" alt="Confusion Matrix" width="350" height="350">
+<img src="./Performance_Plot/Llama.png" alt="Confusion Matrix" width="350" height="350">
+<img src="./Performance_Plot/Qwen.png" alt="Confusion Matrix" width="350" height="350">
+<img src="./Performance_Plot/GPT2.png" alt="Confusion Matrix" width="350" height="350">
 
 🧮 All runs were performed on an **RTX A6000 (48GB VRAM)** under mixed bf16 precision with batch size 4 and cosine LR scheduler.
 
