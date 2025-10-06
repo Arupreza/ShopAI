@@ -9,8 +9,6 @@ A production-ready implementation of **QLoRA-based Supervised Fine-Tuning (SFT)*
 This repository provides a modular framework for **fine-tuning large language models (LLMs)** to predict product prices from textual data.
 The pipeline supports multiple model architectures and includes preprocessing, evaluation, and vector database analysis modules.
 
-<img src="a095ea26-4d06-48a0-84b2-64c4e3aefbec.png" alt="Pipeline Diagram" width="400" height="400">
-
 ---
 
 ## ✨ Key Features
