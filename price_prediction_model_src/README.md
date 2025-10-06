@@ -149,14 +149,26 @@ python price_prediction_model_src/evaluation.py
 ---
 
 ## 📈 Performance Analysis Report
-Roberta:
-<img src="../Performance_Plot/Roberta.png" alt="Confusion Matrix" width="350" height="350">
-Llama:
-<img src="../Performance_Plot/Llama.png" alt="Confusion Matrix" width="350" height="350">
-Qwen:
-<img src="../Performance_Plot/Qwen.png" alt="Confusion Matrix" width="350" height="350">
-GPT2
-<img src="../Performance_Plot/GPT2.png" alt="Confusion Matrix" width="350" height="350">
+
+<table>
+  <tr>
+    <td><b>Roberta:</b><br>
+      <img src="../Performance_Plot/Roberta.png" alt="Roberta Performance" width="400" height="350">
+    </td>
+    <td><b>Llama:</b><br>
+      <img src="../Performance_Plot/Llama.png" alt="Llama Performance" width="400" height="350">
+    </td>
+  </tr>
+  <tr>
+    <td><b>Qwen:</b><br>
+      <img src="../Performance_Plot/Qwen.png" alt="Qwen Performance" width="400" height="350">
+    </td>
+    <td><b>GPT2:</b><br>
+      <img src="../Performance_Plot/GPT2.png" alt="GPT2 Performance" width="400" height="350">
+    </td>
+  </tr>
+</table>
+
 
 🧮 All runs were performed on an **RTX A6000 (48GB VRAM)** under mixed bf16 precision with batch size 4 and cosine LR scheduler.
 
