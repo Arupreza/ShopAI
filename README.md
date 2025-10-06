@@ -1,54 +1,66 @@
-🛍️ ShopAI — Agentic E‑Commerce Intelligence System
+# 🛍️ ShopAI — Agentic E-Commerce Intelligence System
 
-ShopAI is an end‑to‑end intelligent e‑commerce assistant that integrates voice, image, and text modalities to provide price estimation, product sentiment analysis, and personalized recommendations. The long‑term vision is to evolve ShopAI into a fully agentic e‑commerce platform capable of dynamic multi‑agent reasoning and customer interaction.
+**ShopAI** is an end-to-end intelligent e-commerce assistant integrating **voice**, **image**, and **text** modalities to provide product-level **price estimation**, **sentiment analysis**, and **personalized recommendations**.  
+The long-term vision is to evolve ShopAI into a **fully agentic e-commerce platform** capable of dynamic multi-agent reasoning, autonomous customer engagement, and adaptive product intelligence.
 
-🚀 Current Development Status (Phase 1)
+---
 
-At present, two major subsystems are complete:
+## 🚀 Current Development Status — *Phase 1: Core Intelligence Layer*
 
-📈 Price Prediction Model
+Two primary modules have been implemented and validated.
 
-Predicts optimal product prices based on textual descriptions.
+### 📈 Price Prediction Model
 
-Models used: fine‑tuned LLaMA 3.1, Qwen 3, GPT‑2, and RoBERTa baselines.
+**Purpose:** Estimate the optimal market price of a product based on its textual description and features.
 
-Evaluation metrics: MAE, RMSE, R², RMSLE, and accuracy (hits%).
+- **Models:** fine-tuned *LLaMA 3.1*, *Qwen 3*, *GPT-2*, and *RoBERTa* baselines  
+- **Evaluation Metrics:** MAE, RMSE, R², RMSLE, and accuracy (hits %)  
+- **Visualization:** Model performance plots available in `Performance_Plot/`
 
-Visual outputs: Performance plots stored in Performance_Plot/.
+This module forms the **price intelligence backbone** of ShopAI, enabling cost-aware recommendations and market comparison capabilities.
 
-🧠 Product Review Sentiment Model (RLHF)
+---
 
-Implements a full RLHF pipeline for nuanced sentiment reasoning over product reviews.
+### 🧠 Product Review Sentiment Model (RLHF)
 
-Phases: Data Generation (LangChain + OpenAI) → Supervised Fine‑Tuning (SFT) → Reward Modeling (RM) → Reinforcement Learning (PPO).
+**Purpose:** Build a high-fidelity sentiment analysis engine capable of capturing nuanced emotional and contextual patterns in customer reviews.
 
-Trains a LLaMA‑3‑based sentiment analyzer capable of distinguishing subtle emotional tones in reviews.
+#### 🔬 Pipeline Architecture
+1. **Data Generation:** Prompt-based synthetic review generation via *LangChain + OpenAI*  
+2. **Supervised Fine-Tuning (SFT):** Alignment of LLaMA-3 on structured preference data  
+3. **Reward Modeling (RM):** Preference scoring model for reward signal learning  
+4. **Reinforcement Learning (PPO):** Fine-tuning with policy optimization to enhance reasoning consistency
 
-Code located in ProductReviewSentiment/.
+> 📂 Codebase: `ProductReviewSentiment/`
 
-🧩 Planned Features (Phase 2 – Agentic Expansion)
-🔹 Multimodal Interaction
+This RLHF pipeline trains a **LLaMA-3-based sentiment analyzer** capable of distinguishing subtle tone variations such as sarcasm, polarity ambiguity, and brand bias.
 
-Voice Control (voice → text) – users can describe products verbally.
+---
 
-OCR Image Search (image → text) – extract product details from photos.
+## 🧩 Planned Features — *Phase 2: Agentic Expansion*
 
-Text‑to‑Text Chat – natural language Q&A with product knowledge base.
+The next phase aims to extend ShopAI into a **multimodal, multi-agent reasoning system** with real-time customer interaction.
 
-🔹 Intelligent Services
+### 🔹 Multimodal Interaction
+- **Voice Control (Voice → Text):** Users can describe or request products verbally.  
+- **OCR Image Search (Image → Text):** Extract structured product data from images or screenshots.  
+- **Text-to-Text Chat:** Natural language Q&A over the product knowledge base.
 
-Price Estimation according to the product description (already implemented).
+### 🔹 Intelligent Services
+- ✅ **Price Estimation:** (already implemented) contextual prediction via product description.  
+- 🔄 **Product Analysis (Live):** Integrates live review streams for real-time sentiment tracking.  
+- 🔍 **Similar Product Search:** Embedding-based semantic retrieval for item discovery.  
+- 🎥 **YouTube Review Integration:** Extract and analyze sentiment from linked video reviews.
 
-Product Analysis (Live) integrating sentiment evaluation from customer reviews.
+### 🔹 Agentic Workflow
+1. The **base conversational model** interprets customer intent.  
+2. The model **defines the task type** (price inquiry, sentiment review, recommendation, etc.).  
+3. It **invokes the appropriate specialized agent** —  
+   such as `PriceEstimatorAgent`, `SentimentAnalyzerAgent`, or `RecommenderAgent`.
 
-Similar Product Search via semantic and embedding‑based retrieval.
+This structure allows scalable agent orchestration for **adaptive reasoning** and **context-aware decision-making**.
 
-YouTube Review Integration – analyze sentiment from linked product videos.
+---
 
-🔹 Agentic Workflow
+## 📁 Repository Structure
 
-A base conversational model engages the customer to understand intent.
-
-The model defines the problem (price inquiry, review analysis, product comparison, etc.).
-
-Based on intent, it invokes the appropriate specialized agent (price estimator, sentiment analyzer, recommender, etc.).
