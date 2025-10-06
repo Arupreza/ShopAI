@@ -62,5 +62,3 @@ This structure allows scalable agent orchestration for **adaptive reasoning** an
 
 ---
 
-## 📁 Repository Structure
-
