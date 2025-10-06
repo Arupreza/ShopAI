@@ -58,18 +58,14 @@ The next phase aims to extend ShopAI into a **multimodal, multi-agent reasoning 
 - ✅ **Price Estimation:** *(already implemented)* contextual prediction via product description.  
 - 🔄 **Product Analysis (Live):** Integrates live review streams for real-time sentiment tracking.  
 - 🔍 **Similar Product Search:** Embedding-based semantic retrieval for item discovery.  
-- 🎥 **YouTube Review Integration:** Extract and analyze sentiment from linked product videos.
+- 🎥 **YouTube Review Integration:** Extract and analyze sentiment from linked product videos.  
+- 🤖 **AI-Powered Customer Support (After-Purchase Service):**  
+  A post-order conversational agent that:
+  - Tracks delivery status and shipment updates.  
+  - Handles refund, replacement, and return requests automatically.  
+  - Learns from previous customer interactions to personalize support.  
+  - Integrates with product sentiment data to anticipate dissatisfaction and provide proactive solutions.
 
----
-
-### 🔹 Agentic Workflow
-1. The **base conversational model** interprets customer intent.  
-2. The model **defines the task type** — price inquiry, review analysis, recommendation, etc.  
-3. It **invokes the appropriate specialized agent**, such as:
-   - `PriceEstimatorAgent`
-   - `SentimentAnalyzerAgent`
-   - `RecommenderAgent`
-
-This structure enables scalable **multi-agent orchestration**, **adaptive reasoning**, and **context-aware decision-making** for personalized e-commerce intelligence.
+This customer support agent will form the **post-purchase intelligence layer**, closing the feedback loop between customer experience, review sentiment, and product lifecycle management.
 
 ---
